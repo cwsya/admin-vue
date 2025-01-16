@@ -56,6 +56,28 @@ export const constantRoutes = [
   },
 
   {
+    path: '/tool',
+    component: Layout,
+    redirect: '/tool/nacos',
+    name: 'Tool',
+    meta: { title: '工具', icon: 'el-icon-s-tools' },
+    children: [
+      {
+        path: 'nacos',
+        name: 'Nacos',
+        component: () => import('@/views/modules/nacos/index'),
+        meta: { title: 'Nacos爬虫', icon: 'table' }
+      },
+      {
+        path: 'tree',
+        name: 'Tree',
+        component: () => import('@/views/tree/index'),
+        meta: { title: 'Tree', icon: 'tree' }
+      }
+    ]
+  },
+
+  {
     path: '/example',
     component: Layout,
     redirect: '/example/table',

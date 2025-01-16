@@ -52,9 +52,6 @@ const actions = {
         if (!data) {
           return reject('Verification failed, please Login again.')
         }
-
-        console.info('🚀', 'info接口获取到的数据为', data, ' ~file:user method: line:56 -----')
-
         const { username } = data
 
         commit('SET_NAME', username)
