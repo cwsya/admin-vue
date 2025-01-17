@@ -11,22 +11,22 @@
         </el-form-item>
       </el-form>
 
-      <el-tabs>
+      <el-tabs v-model="tabsType" v-loading="nacosDataLoading" @tab-click="paneChange">
         <el-tab-pane
           v-for="nacosData in nacosDatas.nameSpaces"
           :key="nacosData.namespaceShowName"
           :label="nacosData.namespaceShowName"
           :name="nacosData.namespaceShowName"
         >
-          <el-tabs tab-position="left" style="height: 100%;">
+          <el-tabs v-model="tabsVal" tab-position="left">
             <el-tab-pane
               v-for="config in nacosData.configs"
               :key="config.id"
               :label="config.dataId"
+              :name="config.id"
             >
-<!--              {{ config.content }}-->
-              <div>
-                <codemirror ref="codeDiv" v-model="config.content" :options="codeConfig" />
+              <div class="codeDiv">
+                <codemirror v-if="tabsVal == config.id" ref="codeDiv" v-model="config.content" :options="codeConfig" />
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -41,6 +41,24 @@ import { getData } from '@/api/tool/nacos'
 import { codemirror } from 'vue-codemirror'
 import 'codemirror/lib/codemirror.css'
 
+// 表单验证
+const validateDomainOrIP = (rule, value, callback) => {
+  if (!value) {
+    return callback(new Error('请输入域名或IP地址'))
+  }
+
+  // 正则表达式：匹配域名
+  const domainPattern = /^(https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,6}$/i
+  // 正则表达式：匹配IP地址
+  const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::\d{1,5})?$/
+
+  if (domainPattern.test(value) || ipPattern.test(value)) {
+    callback() // 验证通过
+  } else {
+    callback(new Error('请输入有效的域名或IP地址')) // 验证失败
+  }
+}
+
 // 导出默认组件
 export default {
   // 组件名称
@@ -54,24 +72,10 @@ export default {
   props: [],
   // 组件的数据
   data() {
-    const validateDomainOrIP = (rule, value, callback) => {
-      if (!value) {
-        return callback(new Error('请输入域名或IP地址'))
-      }
-
-      // 正则表达式：匹配域名
-      const domainPattern = /^(https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,6}$/i
-      // 正则表达式：匹配IP地址
-      const ipPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::\d{1,5})?$/
-
-      if (domainPattern.test(value) || ipPattern.test(value)) {
-        callback() // 验证通过
-      } else {
-        callback(new Error('请输入有效的域名或IP地址')) // 验证失败
-      }
-    }
-
     return {
+      nacosDataLoading: false,
+      tabsType: '',
+      tabsVal: '', // 默认展示数据'
       // 在这里定义数据属性
       form: {
         url: '101.32.128.51:8848'
@@ -94,58 +98,27 @@ export default {
       }
     }
   },
-  // 计算属性
-  computed: {
-    // 在这里定义计算属性
-  },
-  // 观察者
-  watch: {
-    // 在这里定义观察者
-  },
-  // 生命周期钩子
-  beforeCreate() {
-    // 在组件创建之前执行的代码
-  },
-  created() {
-    // 在组件创建后执行的代码
-  },
-  beforeMount() {
-    // 在组件挂载之前执行的代码
-  },
-  mounted() {
-    // 在组件挂载后执行的代码
-    // console.info('🚀', '代码快', this.$refs.codeDiv.codemirror, ' ~file:index method:mounted line:117 -----')
-    // this.$refs.codeDiv.codemirror.setSize('auto', 600)
-  },
-  beforeUpdate() {
-    // 在组件更新之前执行的代码
-  },
-  updated() {
-    // 在组件更新后执行的代码
-  },
-  beforeDestroy() {
-    // 在组件销毁之前执行的代码
-  },
-  destroyed() {
-    // 在组件销毁后执行的代码
-  },
-  activated() {
-    // 在组件激活时执行的代码
-  },
-  deactivated() {
-    // 在组件停用时执行的代码
-  },
   // 方法
   methods: {
+    // 第一个tabs的change事件
+    paneChange(tab, event) {
+      for (let i = 0, arr = this.nacosDatas.nameSpaces; i < arr.length; i++) {
+        if (this.tabsType == arr[i].namespaceShowName) {
+          this.tabsVal = arr[i].configs[0].id
+        }
+      }
+    },
     // 在这里定义方法
     getNacosData() {
+      this.nacosDataLoading = true
       this.$refs.form.validate(valid => {
         if (valid) {
           this.nacosDatas = []
-
           getData(this.form.url).then(res => {
             this.nacosDatas = res.data
-            console.info('🚀', 'nacos爬虫', res, ' ~file:index method: line:108 -----')
+            this.tabsType = this.nacosDatas.nameSpaces[0].namespaceShowName
+            this.tabsVal = this.nacosDatas.nameSpaces[0].configs[0].id
+            this.nacosDataLoading = false
           })
         }
       })
@@ -155,7 +128,15 @@ export default {
 </script>
 
 <style scoped>
-.CodeMirror {
-  height: 1000px !important;
+.codeDiv {
+  .CodeMirror {
+    /* Set height, width, borders, and global font properties here */
+    font-family: monospace;
+    height: calc(100vh - 240px) !important;
+    color: black;
+    direction: ltr;
+  }
 }
+
 </style>
+
